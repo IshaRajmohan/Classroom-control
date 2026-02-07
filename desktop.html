@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassroomControl - Desktop Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: white;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: #1a1a1a;
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #2a2a2a;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .activity-log {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #2a2a2a;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-log h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .log-entry {
+            padding: 10px;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .log-command {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 2px solid #667eea40;
+        }
+
+        .instructions h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .instructions li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎓 ClassroomControl Desktop Monitor</h1>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Server Running</span>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h2>📱 How to Connect Your Phone</h2>
+        <ul>
+            <li>Make sure your phone is on the <strong>same WiFi network</strong></li>
+            <li>Open your phone's browser</li>
+            <li>Go to: <strong id="mobileUrl">Loading...</strong></li>
+            <li>Start controlling your computer from anywhere!</li>
+        </ul>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Connected Devices</h3>
+            <div class="stat-value" id="connectedDevices">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Commands</h3>
+            <div class="stat-value" id="totalCommands">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Uptime</h3>
+            <div class="stat-value" id="uptime">0:00</div>
+        </div>
+    </div>
+
+    <div class="activity-log">
+        <h2>📊 Activity Log</h2>
+        <div id="logEntries">
+            <div class="log-entry">
+                <span class="log-time">--:--:--</span>
+                <span>Server started - waiting for connections...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let startTime = Date.now();
+        let commandCount = 0;
+
+        // Get mobile URL
+        const mobileUrl = `http://${window.location.hostname}:${window.location.port || 8080}/controller`;
+        document.getElementById('mobileUrl').textContent = mobileUrl;
+
+        // Update uptime
+        setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('uptime').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+
+        // Log activity
+        function addLogEntry(message, isCommand = false) {
+            const logEntries = document.getElementById('logEntries');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span ${isCommand ? 'class="log-command"' : ''}>${message}</span>
+            `;
+            
+            logEntries.insertBefore(entry, logEntries.firstChild);
+            
+            // Keep only last 50 entries
+            while (logEntries.children.length > 50) {
+                logEntries.removeChild(logEntries.lastChild);
+            }
+            
+            if (isCommand) {
+                commandCount++;
+                document.getElementById('totalCommands').textContent = commandCount;
+            }
+        }
+
+        // Mark as ready
+        setTimeout(() => {
+            document.getElementById('statusDot').classList.add('connected');
+            document.getElementById('statusText').textContent = 'Server Active';
+            document.getElementById('connectedDevices').textContent = '0';
+            addLogEntry('System ready - waiting for mobile connections...');
+        }, 1000);
+    </script>
+</body>
+</html>

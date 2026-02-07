@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>ClassroomControl</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: #1a1a1a;
+            border-bottom: 2px solid #2a2a2a;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Touchpad Tab */
+        .touchpad-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .touchpad {
+            flex: 1;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+            position: relative;
+            border: 2px solid #3a3a3a;
+            margin: 10px;
+            border-radius: 12px;
+            cursor: none;
+            touch-action: none;
+        }
+
+        .touchpad-cursor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.4);
+            border: 2px solid #667eea;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s;
+            opacity: 0.5;
+        }
+
+        .touchpad-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+            pointer-events: none;
+            font-size: 0.9em;
+        }
+
+        .touchpad-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+        }
+
+        .touchpad-btn {
+            padding: 20px;
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            color: white;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .touchpad-btn:active {
+            background: #667eea;
+            transform: scale(0.95);
+        }
+
+        /* Quick Actions Tab */
+        .quick-actions {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .action-group {
+            margin-bottom: 20px;
+        }
+
+        .action-group h3 {
+            font-size: 0.9em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 20px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+            border: 2px solid #3a3a3a;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .action-btn:active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(0.95);
+            border-color: #667eea;
+        }
+
+        .action-btn .icon {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .action-btn.wide {
+            grid-column: span 2;
+        }
+
+        /* Keyboard Tab */
+        .keyboard-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .keyboard-input {
+            width: 100%;
+            padding: 15px;
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            color: white;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        .keyboard-shortcuts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .key-btn {
+            padding: 15px;
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .key-btn:active {
+            background: #667eea;
+            transform: scale(0.95);
+        }
+
+        /* Info message */
+        .info-message {
+            background: #667eea20;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px;
+            font-size: 0.85em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 ClassroomControl</h1>
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="touchpad">🖱️ Touchpad</button>
+            <button class="tab" data-tab="actions">⚡ Actions</button>
+            <button class="tab" data-tab="keyboard">⌨️ Keys</button>
+        </div>
+
+        <!-- Touchpad Tab -->
+        <div class="tab-content active" id="touchpad">
+            <div class="info-message">
+                Screen: <span id="screenInfo">Detecting...</span>
+            </div>
+            <div class="touchpad-container">
+                <div class="touchpad" id="touchpad">
+                    <div class="touchpad-cursor" id="touchpadCursor"></div>
+                    <div class="touchpad-hint">
+                        👆 Move finger to control mouse<br>
+                        <span style="font-size: 0.8em;">Tap to click • Two fingers to scroll</span>
+                    </div>
+                </div>
+                <div class="touchpad-buttons">
+                    <button class="touchpad-btn" id="leftClick">Left Click</button>
+                    <button class="touchpad-btn" id="rightClick">Right Click</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Tab -->
+        <div class="tab-content" id="actions">
+            <div class="quick-actions">
+                <div class="action-group">
+                    <h3>Presentation</h3>
+                    <div class="action-grid">
+                        <button class="action-btn" data-action="prev_slide">
+                            <span class="icon">←</span>
+                            Previous
+                        </button>
+                        <button class="action-btn" data-action="next_slide">
+                            <span class="icon">→</span>
+                            Next
+                        </button>
+                        <button class="action-btn wide" data-action="toggle_fullscreen">
+                            <span class="icon">⛶</span>
+                            Toggle Fullscreen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-group">
+                    <h3>Media Control</h3>
+                    <div class="action-grid">
+                        <button class="action-btn" data-action="play_pause">
+                            <span class="icon">⏯</span>
+                            Play/Pause
+                        </button>
+                        <button class="action-btn" data-action="volume_up">
+                            <span class="icon">🔊</span>
+                            Volume +
+                        </button>
+                        <button class="action-btn" data-action="volume_down">
+                            <span class="icon">🔉</span>
+                            Volume -
+                        </button>
+                        <button class="action-btn" data-action="mute">
+                            <span class="icon">🔇</span>
+                            Mute
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-group">
+                    <h3>Quick Keys</h3>
+                    <div class="action-grid">
+                        <button class="action-btn" onclick="sendKeyPress('escape')">
+                            <span class="icon">⎋</span>
+                            Escape
+                        </button>
+                        <button class="action-btn" onclick="sendKeyPress('enter')">
+                            <span class="icon">⏎</span>
+                            Enter
+                        </button>
+                        <button class="action-btn" onclick="sendKeyPress('tab')">
+                            <span class="icon">⇥</span>
+                            Tab
+                        </button>
+                        <button class="action-btn" onclick="sendKeyPress('backspace')">
+                            <span class="icon">⌫</span>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Tab -->
+        <div class="tab-content" id="keyboard">
+            <div class="keyboard-container">
+                <input type="text" class="keyboard-input" id="textInput" placeholder="Type text to send to computer...">
+                <button class="action-btn wide" onclick="sendText()" style="margin-bottom: 15px;">
+                    <span class="icon">📝</span>
+                    Send Text
+                </button>
+
+                <h3 style="color: #888; font-size: 0.9em; margin-bottom: 10px;">SHORTCUTS</h3>
+                <div class="keyboard-shortcuts">
+                    <button class="key-btn" onclick="sendKeyPress('up')">↑</button>
+                    <button class="key-btn" onclick="sendKeyPress('down')">↓</button>
+                    <button class="key-btn" onclick="sendKeyPress('left')">←</button>
+                    <button class="key-btn" onclick="sendKeyPress('right')">→</button>
+                    <button class="key-btn" onclick="sendKeyPress('pageup')">Page ↑</button>
+                    <button class="key-btn" onclick="sendKeyPress('pagedown')">Page ↓</button>
+                    <button class="key-btn" onclick="sendKeyPress('home')">Home</button>
+                    <button class="key-btn" onclick="sendKeyPress('end')">End</button>
+                    <button class="key-btn" onclick="sendKeyPress('f5')">F5</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let screenWidth = 1920;
+        let screenHeight = 1080;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+
+        // WebSocket connection
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.hostname;
+            const port = window.location.port || 8080;
+            
+            ws = new WebSocket(`${protocol}//${host}:${port}`);
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket connected');
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Connected';
+                hapticFeedback();
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleServerMessage(data);
+                } catch (err) {
+                    console.error('Error parsing message:', err);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('❌ WebSocket disconnected');
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Reconnecting...';
+                
+                setTimeout(connect, 3000);
+            };
+        }
+
+        function handleServerMessage(data) {
+            if (data.type === 'init') {
+                screenWidth = data.screenWidth;
+                screenHeight = data.screenHeight;
+                document.getElementById('screenInfo').textContent = `${screenWidth} x ${screenHeight} (${data.platform})`;
+                console.log('📺 Screen:', screenWidth, 'x', screenHeight, 'Platform:', data.platform);
+            }
+        }
+
+        function send(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            } else {
+                console.error('❌ WebSocket not connected');
+            }
+        }
+
+        function hapticFeedback(duration = 30) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(duration);
+            }
+        }
+
+        // Touchpad handling
+        const touchpad = document.getElementById('touchpad');
+        const cursor = document.getElementById('touchpadCursor');
+        let lastTouch = { x: 0, y: 0 };
+        let touchStartTime = 0;
+        let touches = [];
+
+        touchpad.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchStartTime = Date.now();
+            touches = Array.from(e.touches);
+            
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const rect = touchpad.getBoundingClientRect();
+                lastTouch = {
+                    x: touch.clientX - rect.left,
+                    y: touch.clientY - rect.top
+                };
+                
+                cursor.style.left = lastTouch.x + 'px';
+                cursor.style.top = lastTouch.y + 'px';
+                cursor.style.opacity = '1';
+            }
+        });
+
+        touchpad.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 1) {
+                // Single finger - move mouse
+                const touch = e.touches[0];
+                const rect = touchpad.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                cursor.style.left = x + 'px';
+                cursor.style.top = y + 'px';
+                
+                // Map touchpad position to screen coordinates
+                const screenX = Math.round((x / rect.width) * screenWidth);
+                const screenY = Math.round((y / rect.height) * screenHeight);
+                
+                send({ type: 'mouse_move', x: screenX, y: screenY });
+                
+                lastTouch = { x, y };
+            } else if (e.touches.length === 2) {
+                // Two fingers - scroll
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                const currentY = (touch1.clientY + touch2.clientY) / 2;
+                const lastY = (touches[0].clientY + touches[1].clientY) / 2;
+                const delta = currentY - lastY;
+                
+                if (Math.abs(delta) > 5) {
+                    send({ 
+                        type: 'scroll', 
+                        direction: delta > 0 ? 'down' : 'up',
+                        amount: Math.max(1, Math.abs(Math.round(delta / 10)))
+                    });
+                }
+                
+                touches = Array.from(e.touches);
+            }
+        });
+
+        touchpad.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            cursor.style.opacity = '0.5';
+            
+            const touchDuration = Date.now() - touchStartTime;
+            
+            // Tap to click (quick tap under 200ms)
+            if (e.touches.length === 0 && touchDuration < 200) {
+                send({ type: 'mouse_click', button: 'left' });
+                hapticFeedback(30);
+            }
+        });
+
+        // Click buttons
+        document.getElementById('leftClick').addEventListener('click', () => {
+            send({ type: 'mouse_click', button: 'left' });
+            hapticFeedback();
+        });
+
+        document.getElementById('rightClick').addEventListener('click', () => {
+            send({ type: 'mouse_click', button: 'right' });
+            hapticFeedback();
+        });
+
+        // Quick actions
+        document.querySelectorAll('.action-btn[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                send({ type: action });
+                hapticFeedback();
+            });
+        });
+
+        // Keyboard functions
+        function sendText() {
+            const input = document.getElementById('textInput');
+            const text = input.value.trim();
+            
+            if (text) {
+                send({ type: 'type_text', text: text });
+                input.value = '';
+                hapticFeedback();
+            }
+        }
+
+        function sendKeyPress(key, modifier = null) {
+            send({ type: 'key_press', key: key, modifier: modifier });
+            hapticFeedback();
+        }
+
+        // Enter key in text input
+        document.getElementById('textInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendText();
+            }
+        });
+
+        // Prevent accidental zoom
+        document.addEventListener('gesturestart', e => e.preventDefault());
+        document.addEventListener('gesturechange', e => e.preventDefault());
+
+        // Keep screen awake
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(() => {});
+        }
+
+        // Initialize
+        connect();
+    </script>
+</body>
+</html>
